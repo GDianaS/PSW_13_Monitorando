@@ -65,6 +65,15 @@ class Reuniao(models.Model):
     tag = models.CharField(max_length=2, choices=tag_choices)
     descricao = models.TextField()
 
+class Tarefa(models.Model):
+    mentorado = models.ForeignKey(Mentorados, on_delete=models.DO_NOTHING)
+    tarefa = models.CharField(max_length=255)
+    realizada = models.BooleanField(default=False)
+
+class Upload(models.Model):
+    mentorado = models.ForeignKey(Mentorados, on_delete=models.DO_NOTHING)
+    video = models.FileField(upload_to='video')
+
 # python manage.py makemigrations
 # python manage.py migrate
 

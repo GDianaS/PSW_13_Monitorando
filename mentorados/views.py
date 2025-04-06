@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 
 from .auth import valida_token
-from .models import Mentorados, Navigators, DisponibilidadedeHorarios, Reuniao  # permite usar as variaveis das classes em models
+from .models import Mentorados, Navigators, DisponibilidadedeHorarios, Reuniao, Tarefa, Upload  # permite usar as variaveis das classes em models
 
 from django.contrib import messages
 from django.contrib.messages import constants
@@ -157,3 +157,43 @@ def agendar_reuniao(request):
 
         messages.add_message(request, constants.SUCCESS, 'Reunião agendada com sucesso.')
         return redirect('escolher_dia')
+
+def tarefa(request, id):
+    mentorado = Mentorados.objects.get(id = id)
+
+    if mentorado.user != request.user:
+        raise Http404()
+
+    if request.method == 'GET':
+        tarefas = Tarefa.objects.filter(mentorado=mentorado)
+        videos = Upload.objects.filter(mentorado=mentorado)
+
+        return render(request, 'tarefa.html', {'mentorado': mentorado, 'tarefas': tarefas, 'videos': videos})
+
+    else:
+        tarefa = request.POST.get('tarefa')
+
+        #TODO: Validação se não é um texto vazio ou se tem um máximo de caracteres
+
+        t = Tarefa(
+            mentorado=mentorado,
+            tarefa = tarefa
+        )
+
+        t.save()
+
+        return redirect(f'/mentorados/tarefa/{id}')
+
+
+def upload(request, id):
+    mentorado = Mentorados.objects.get(id=id)
+    if mentorado.user != request.user:
+        raise Http404()
+
+    video = request.FILES.get('video')
+    upload = Upload(
+        mentorado=mentorado,
+        video=video
+    )
+    upload.save()
+    return redirect(f'/mentorados/tarefa/{mentorado.id}')
