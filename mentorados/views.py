@@ -48,7 +48,8 @@ def mentorados(request):
 
 def reunioes(request):
     if request.method == 'GET':
-        return render (request, 'reunioes.html')
+        reunioes = Reuniao.objects.filter(data__mentor=request.user)
+        return render (request, 'reunioes.html', {'reunioes': reunioes})
     elif request.method == 'POST':
         data = request.POST.get('data')
         data = datetime.strptime(data, '%Y-%m-%dT%H:%M')
@@ -116,11 +117,13 @@ def agendar_reuniao(request):
     if not valida_token(request.COOKIES.get('auth_token')):
         return redirect('auth_mentorado')
 
+    mentorado = valida_token(request.COOKIES.get('auth_token'))
+
+    #TODO: Validar se o horário agendado é realmente de um mentor do mentorado
+
     if request.method == 'GET':
         data = request.GET.get('data') # parametro vem da url
         data = datetime.strptime(data, '%d-%m-%Y')
-
-        mentorado = valida_token(request.COOKIES.get('auth_token'))
 
         # horarios disponiveis para o dia
         horarios = DisponibilidadedeHorarios.objects.filter(
@@ -130,3 +133,27 @@ def agendar_reuniao(request):
             mentor = mentorado.user
         )
         return render(request, 'agendar_reuniao.html', {'horarios': horarios, 'tags': Reuniao.tag_choices})
+
+    else:
+        horario_id = request.POST.get('horario')
+        tag = request.POST.get('tag')
+        descricao = request.POST.get('descricao')
+
+        reuniao = Reuniao(
+            data_id = horario_id,
+            mentorado=mentorado,
+            tag = tag,
+            descricao = descricao,
+        )
+
+        reuniao.save()
+
+        #TODO: Atomicidade
+
+        #Marca a disponibilidade de horário como False:
+        horario = DisponibilidadedeHorarios.objects.get(id=horario_id)
+        horario.agendado = True
+        horario.save()
+
+        messages.add_message(request, constants.SUCCESS, 'Reunião agendada com sucesso.')
+        return redirect('escolher_dia')
